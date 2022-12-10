@@ -1,0 +1,71 @@
+import android.os.AsyncTask;
+import android.widget.TextView;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+public class MainActivity extends AppCompatActivity {
+  private TextView temperatureTextView;
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_main);
+
+    temperatureTextView = findViewById(R.id.temperature_text_view);
+
+    String cityName = "San Francisco";
+    new GetTemperatureTask().execute(cityName);
+  }
+
+  private class GetTemperatureTask extends AsyncTask<String, Void, Double> {
+    @Override
+    protected Double doInBackground(String... params) {
+      String cityName = params[0];
+      String apiKey = "YOUR_API_KEY";
+      String urlString = "https://api.openweathermap.org/data/2.5/weather?q=" + cityName + "&units=imperial&appid=" + apiKey;
+
+      try {
+        URL url = new URL(urlString);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(5000);
+        connection.setReadTimeout(5000);
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode != 200) {
+          return null;
+        }
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+          response.append(line);
+        }
+        reader.close();
+
+        JSONObject json = new JSONObject(response.toString());
+        JSONObject main = json.getJSONObject("main");
+        double temperature = main.getDouble("temp");
+        return temperature;
+      } catch (Exception e) {
+        return null;
+      }
+    }
+
+    @Override
+    protected void onPostExecute(Double temperature) {
+      if (temperature != null) {
+        temperatureTextView.setText(String.format("%.1f°F", temperature));
+      } else {
+        temperatureTextView.setText("Error getting temperature");
+      }
+    }
+  }
+}
